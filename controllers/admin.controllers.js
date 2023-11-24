@@ -455,11 +455,10 @@ routes.createLoanReducingInterest = async (req, res) => {
     const InterestRate = parseFloat(interestRate);
 
     // Calculate the monthly payment
-    const monthlyInterestRate = InterestRate / 100 / 12;
+    // const monthlyInterestRate = InterestRate / 100 / 12;
+    const monthlyInterestRate = interestRate / 100 ;
 
-    const monthlyPayment =
-      Amount *
-      (monthlyInterestRate / (1 - Math.pow(1 + monthlyInterestRate, -Term)));
+    const monthlyPayment = Math.round( Amount * (monthlyInterestRate / (1 - Math.pow(1 + monthlyInterestRate, -Term))));
 
     // Initialize the loan balance
     let balance = Amount;
@@ -499,6 +498,49 @@ routes.createLoanReducingInterest = async (req, res) => {
 
     await newLoan.save();
 
+    // const currentMonth = new Date().getMonth() + 1;
+    // const currentYear = new Date().getFullYear();
+
+    // const balanceTrack = await balanceTrackModel.findOne({
+    //   month: currentMonth,
+    //   year: currentYear,
+    // });
+
+    // // if not found create a new one
+
+    // if (!balanceTrack) {
+    //   const activeLoan = await LoanModel.find({
+    //     status: { $in: ["Default", "Active"] },
+    //   });
+
+    //   var activeLoanAmount = 0;
+
+    //   activeLoan.map((loan) => {
+    //     activeLoanAmount += loan.totalAmount;
+    //   });
+
+    //   var activeInvestmentAmount = 0;
+
+    //   const activeInvestment = await InvestmentModel.find({ status: "Active" });
+
+    //   activeInvestment.map((investment) => {
+    //     activeInvestmentAmount += investment.amount;
+    //   });
+
+    //   const newBalanceTrack = await balanceTrackModel.create({
+    //     month: currentMonth,
+    //     year: currentYear,
+    //     totalInterestEarned: 0,
+    //     totalActiveLoan: activeLoanAmount + Amount,
+    //     totalInvestment: activeInvestmentAmount,
+    //     totalLoanRepayment: 0,
+    //   });
+    // }
+    // else{
+    //   balanceTrack.totalActiveLoan += (monthlyPayment * Term),
+    //   await balanceTrack.save();
+    // }
+
     user.loan.push(newLoan._id);
     const result = await user.save();
 
@@ -530,7 +572,8 @@ routes.createLoanSimpleInterest = async (req, res) => {
     const Term = parseInt(term);
     const InterestRate = parseFloat(interestRate);
 
-    const totalAmount = Amount + (Amount * InterestRate * Term) / 100;
+    // const totalAmount = Amount + (Amount * InterestRate) / 100;
+    const totalAmount = Amount + (Amount * interestRate/100 * Term   );
 
     const repaymentAmount = Math.round(totalAmount / Term);
     let balance = Amount;
@@ -539,7 +582,7 @@ routes.createLoanSimpleInterest = async (req, res) => {
 
     // Calculate the loan details for each month
     for (let month = 1; month <= Term; month++) {
-      const interestPayment = balance * (InterestRate / 100 / 12); // Monthly interest payment
+      const interestPayment = balance * (InterestRate / 100 / 12 ); // Monthly interest payment
       const principalPayment = repaymentAmount - interestPayment;
       balance -= principalPayment;
 
@@ -570,44 +613,47 @@ routes.createLoanSimpleInterest = async (req, res) => {
 
     await newloan.save();
 
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
+    // const currentMonth = new Date().getMonth() + 1;
+    // const currentYear = new Date().getFullYear();
 
-    const balanceTrack = await balanceTrackModel.findOne({
-      month: currentMonth,
-      year: currentYear,
-    });
+    // const balanceTrack = await balanceTrackModel.findOne({
+    //   month: currentMonth,
+    //   year: currentYear,
+    // });
 
-    // if not found create a new one
+    // // if not found create a new one
 
-    if (!balanceTrack) {
-      const previousBalanceTrack = await balanceTrackModel.find();
-      var lastBalanceTrack;
-      if (previousBalanceTrack.length > 0) {
-        lastBalanceTrack =
-          previousBalanceTrack[previousBalanceTrack.length - 1];
-      }
-      const newBalanceTrack = await balanceTrackModel.create({
-        month: currentMonth,
-        year: currentYear,
-        // balance: admin?.balance,
-        totalInterestEarned: 0,
-        totalActiveLoan: lastBalanceTrack.totalActiveLoan
-          ? lastBalanceTrack.totalActiveLoan
-          : Amount,
-        totalInvestment: lastBalanceTrack.totalInvestment
-          ? lastBalanceTrack.totalInvestment
-          : 0,
-        totalLoanRepayment: 0,
-      });
-      balanceTrack = newBalanceTrack;
-    }
+    // if (!balanceTrack){
+    //   const activeLoan = await LoanModel.find({
+    //     status: { $in: ["Default", "Active"] },
+    //   });
 
-    // // update the balance track
-    // // balanceTrack. += Amount;
-    // balanceTrack.totalInterestEarned += loan.upcommingEMI.interestPayment;
+    //   var activeLoanAmount = 0;
 
-    await balanceTrack.save();
+    //   activeLoan.map((loan) => {
+    //     activeLoanAmount += loan.totalAmount;
+    //   });
+
+    //   var activeInvestmentAmount = 0;
+
+    //   const activeInvestment = await InvestmentModel.find({ status: "Active" });
+
+    //   activeInvestment.map((investment) => {
+    //     activeInvestmentAmount += investment.amount;
+    //   });
+
+    //   const newBalanceTrack = await balanceTrackModel.create({
+    //     month: currentMonth,
+    //     year: currentYear,
+    //     totalInterestEarned: 0,
+    //     totalActiveLoan: activeLoanAmount + Amount,
+    //     totalInvestment: activeInvestmentAmount,
+    //     totalLoanRepayment: 0,
+    //   });
+    // }else{
+    //   balanceTrack.totalActiveLoan +=  totalAmount,
+    //   await balanceTrack.save();
+    // }
 
     user.loan.push(newloan._id);
     const result = await user.save();
@@ -793,7 +839,6 @@ routes.approveloan = async (req, res) => {
     admin.balance -= loan.amount;
     await admin.save();
 
-    // add to balanceTrack
 
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
@@ -803,16 +848,39 @@ routes.approveloan = async (req, res) => {
       year: currentYear,
     });
 
-    if (balanceTrack) {
-      balanceTrack.totalActiveLoan += loan.amount;
-      await balanceTrack.save();
-    } else {
-      const newBalanceTrack = new balanceTrackModel({
+    // if not found create a new one
+
+    if (!balanceTrack) {
+      const activeLoan = await LoanModel.find({
+        status: { $in: ["Default", "Active"] },
+      });
+
+      var activeLoanAmount = 0;
+
+      activeLoan.map((loan) => {
+        activeLoanAmount += loan.totalAmount;
+      });
+
+      var activeInvestmentAmount = 0;
+
+      const activeInvestment = await InvestmentModel.find({ status: "Active" });
+
+      activeInvestment.map((investment) => {
+        activeInvestmentAmount += investment.amount;
+      });
+
+      const newBalanceTrack = await balanceTrackModel.create({
         month: currentMonth,
         year: currentYear,
-        totalActiveLoan: loan.amount,
+        totalInterestEarned: 0,
+        totalActiveLoan: activeLoanAmount ,
+        totalInvestment: activeInvestmentAmount,
+        totalLoanRepayment: 0,
       });
-      await newBalanceTrack.save();
+    }
+    else{
+      balanceTrack.totalActiveLoan += loan.totalAmount,
+      await balanceTrack.save();
     }
 
     // Add notification
@@ -835,17 +903,19 @@ routes.rejectloan = async (req, res) => {
   try {
     const loan = await LoanModel.findById(id);
     if (!loan) return res.status(404).json({ error: "Loan not found" });
-    loan.status = "Rejected";
+    loan.status = "Declined";
     const result = await loan.save();
 
     // add notification
     const notification = await NotificationModel.create({
+      userId:loan.user,
       title: "Loan Rejected",
       message: `${result._id}'s loan has been rejected`,
     });
 
     res.status(200).json({ result });
   } catch (error) {
+    console.log(error)
     res.status(500).json({ error: "Something went wrong" });
   }
 };
@@ -875,9 +945,11 @@ routes.releaseInvestmentInterestFixedInterest = async (req, res) => {
       investment.interestEarned += Math.round(
         (investment.amount * admin.interestOnInvestment) / 100
       );
+
       admin.balance -= Math.round(
         (investment.amount * admin.interestOnInvestment) / 100
       );
+
       await investment.save();
 
       const notification = await NotificationModel.create({
@@ -929,28 +1001,52 @@ routes.releaseInvestmentInterestShareProfit = async (req, res) => {
 
     const totalActiveLoan = lastBalanceTrack?.totalActiveLoan;
 
-    // const 
+    const totalInvestment = lastBalanceTrack?.totalInvestment;
 
     const totalInterestEarned = lastBalanceTrack?.totalInterestEarned;
 
     investments.forEach(async (investment) => {
-      console.log(investment);
+      // console.log(investment);
       //calculate percentage of investment.amount in totalActiveLoan
-      const percentage = Math.round(investment.amount / totalActiveLoan);
+      const percentage = investment.amount / totalInvestment;
       admin.balance -= Math.round(totalInterestEarned * percentage);
       investment.interestEarned += Math.round(totalInterestEarned * percentage);
       await investment.save();
+      
+      // const user = await UserModel.findById(investment.userId);
+      // var newBalance = user.balance;
+      // newBalance = newBalance + Math.round(totalInterestEarned * percentage);
+      // user.balance = newBalance
+      // console.log(newBalance)
+      //
+      // const User =  await user.save();
+      // console.log(User)
+    });
+
+    const allUsers = await UserModel.find({ investment: { $exists: true, $ne: [] } }).populate("investment");
+
+    allUsers.forEach(async(user)=>{
+      var totalInvestment = 0;
+      var totalInterest = 0;
+      user.investment.map((investment)=>{
+        if(investment.status === "Active" && investment.savingProduct === "shareProfit"){
+          totalInterest += investment.interestEarned;
+          totalInvestment += investment.amount;
+        }
+      })
+
       const notification = await NotificationModel.create({
-        userId: investment.userId,
-        title: "Interest Released",
-        message: `Interest has been released for all investments`,
+        userId: user._id,
+        title: `Interest Released for ${totalInvestment}`,
+        message: `Interest has been released for ${totalInvestment}`,
       });
 
-      const user = await UserModel.findById(investment.userId);
-      user.balance += Math.round(totalInterestEarned * percentage);
+      var totalAmount = totalInterest + totalInvestment
+      user.balance = totalAmount;
       user.notification.push(notification._id);
-      await user.save();
-    });
+      await user.save()
+    })
+
 
     await admin.save();
 
@@ -1072,6 +1168,21 @@ routes.approveWithdrawlRequest = async (req, res) => {
         await investment.save();
       }
     });
+
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+
+    const balanceTrack = await balanceTrackModel.findOne({
+      month: currentMonth,
+      year: currentYear,
+    });
+
+    // if not found create a new one
+
+    if (balanceTrack) {
+      balanceTrack.totalInvestment -= withdrawlRequest.amount,
+      await balanceTrack.save();
+    }
 
     user.balance -= withdrawlRequest.amount;
 
@@ -1271,9 +1382,8 @@ routes.gettransaction = async (req, res) => {
   }
 };
 
-routes.userTranstionDetail = async(req,res)=>{
+routes.userTranstionDetail = async (req, res) => {
   try {
-    
     const userId = req.params.id;
 
     const user = await UserModel.findById(userId);
@@ -1288,30 +1398,40 @@ routes.userTranstionDetail = async(req,res)=>{
     //   "Investment", // deposit(user)
     //   "LoanRepayment", // withdraw(user)
 
-    const loanArray = ["LoanGiven","LoanPaid","LoanRepayment"];
+    const loanArray = ["LoanGiven", "LoanPaid", "LoanRepayment"];
 
-    const InvestmentArray = ["Deposit","Withdraw","Investment"];
+    const InvestmentArray = ["Deposit", "Withdraw", "Investment"];
 
-    const loanTransaction = await TransactionModel.find({transactionType : { $in : loanArray} }); 
+    const loanTransaction = await TransactionModel.find({
+      userId,
+      transactionType: { $in: loanArray },
+    });
 
-    const InvestTransaction = await TransactionModel.find({transactionType : { $in: InvestmentArray}});
+    const InvestTransaction = await TransactionModel.find({
+      userId,
+      transactionType: { $in: InvestmentArray },
+    });
 
-    InvestTransaction.map((item)=>{
-      if(item.transactionType === 'Withdraw'){
+    InvestTransaction.map((item) => {
+      if (item.transactionType === "Withdraw") {
         totalwithdraw += item.amount;
-      }
-      else{
+      } else {
         totaldeposit += item.amount;
       }
-    })
+    });
 
-    return res.status(200).json({ totaldeposit, totalwithdraw, balance : user.balance, loanTransaction, InvestTransaction});
-
+    return res.status(200).json({
+      totaldeposit,
+      totalwithdraw,
+      balance: user.balance,
+      loanTransaction,
+      InvestTransaction,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Something went wrong" });
   }
-}
+};
 
 // ----------------------------------------------Customer Support------------------------------------------------ //
 

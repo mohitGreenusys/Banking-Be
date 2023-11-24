@@ -13,21 +13,27 @@ const auth = async (req, res, next) => {
 
     const token = req.headers.authorization.split(" ")[1];
 
-   
-
     if (token) {
+      try {
+        const decodedData = jwt.verify(token, process.env.JWT_SECRET);
+        const id = decodedData?.id;
+        // console.log(id,"token")
+        if (!mongoose.Types.ObjectId.isValid(id))
+          return res.status(404).json({ error: "No user with that id" });
 
-      const decodedData = jwt.verify(token, process.env.JWT_SECRET);
-      const id = decodedData?.id;
-      // console.log(id,"token")
-      if (!mongoose.Types.ObjectId.isValid(id))
-        return res.status(404).json({ error: "No user with that id" });
+        const user = await UserModels.findById(id);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
-      const user = await UserModels.findById(id);
-      if (!user) return res.status(404).json({ error: "User not found" });
-
-      req.userId = id;
-      next();
+        req.userId = id;
+        next();
+      } catch (err) {
+        if (err.name === "TokenExpiredError") {
+          return res
+            .status(401)
+            .json({ error: "Token expired, please log in again" });
+        }
+        throw err; // Throw other errors for generic error handling
+      }
     } else {
       return res.status(401).send({ error: "Found Unauthorized" });
     }

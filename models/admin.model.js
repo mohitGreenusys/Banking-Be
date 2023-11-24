@@ -32,6 +32,10 @@ const adminSchema = new mongoose.Schema({
     type: Number,
     default: 10,
   },
+  interestRateCompound: {
+    type: Number,
+    default: 10,
+  },
   role: {
     type: String,
     enum: ["Admin", "Manager"],

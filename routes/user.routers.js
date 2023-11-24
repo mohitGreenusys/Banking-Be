@@ -132,6 +132,11 @@ router.post(
   Userauth,
   userController.createLoanReducingInterest
 );
+router.post(
+  "/loanCompoundInterest",
+  Userauth,
+  userController.createLoanCompoundInterest
+);
 router.get(
   "/loanTransactions/:id",
   Userauth,

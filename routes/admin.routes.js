@@ -99,10 +99,7 @@ router.get(
   adminauth,
   adminController.releaseInvestmentInterestFixedInterest
 );
-router.get(
-  "/releaseProfitShare",
-  adminauth,
-  adminController.releaseInvestmentInterestShareProfit
+router.get("/releaseProfitShare",adminauth,adminController.releaseInvestmentInterestShareProfit
 );
 
 router.get("/allinvestment", adminauth, adminController.getinvestment);
@@ -111,7 +108,7 @@ router.get("/investment/:id", adminauth, adminController.getinvestmentbyuser);
 // ----------------------------------------------Transaction Details------------------------------------------------ //
 
 router.get("/gettransaction/:range", adminauth, adminController.gettransaction);
-router.get("/userTranstion/:id", adminauth, adminController.userTranstionDetail)
+router.get("/userTranstion/:id",adminauth, adminController.userTranstionDetail)
 
 // ----------------------------------------------Customer Support------------------------------------------------ //
 router.get("/alltickets", adminauth, adminController.getCustomerSupport);
