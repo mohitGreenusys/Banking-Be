@@ -573,7 +573,17 @@ routes.createLoanSimpleInterest = async (req, res) => {
     const InterestRate = parseFloat(interestRate);
 
     // const totalAmount = Amount + (Amount * InterestRate) / 100;
-    const totalAmount = Amount + (Amount * interestRate/100 * Term   );
+    // const totalAmount = Amount + (Amount * interestRate/100 * Term   );
+    var totalAmount = 0;
+
+    if(Term < 12){
+      totalAmount =
+      Amount + parseInt(((Amount * InterestRate * 12) / 1200).toFixed(2));
+    }else{
+      totalAmount =
+      Amount + parseInt(((Amount * InterestRate * Term) / 1200).toFixed(2));
+    }
+
 
     const repaymentAmount = Math.round(totalAmount / Term);
     let balance = Amount;

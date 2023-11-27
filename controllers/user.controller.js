@@ -835,8 +835,10 @@ routes.savingCalculator = async (req, res) => {
 
     if (type === "Simple Interest") {
       interestRate = admin.interestRateSimple;
-      const Term = parseInt(duration);
-      console.log(interestRate / 12);
+      var Term = parseInt(duration);
+      if (Term < 12) {
+        Term = 12;
+      }
       const totalAmount = Amount + (Amount * interestRate * Term) / 1200;
 
       return res.status(200).json({ totalAmount });
@@ -844,9 +846,12 @@ routes.savingCalculator = async (req, res) => {
       interestRate = admin.interestRateReducing;
 
       // const Amount = parseInt(amount);
-      const Term = parseInt(duration);
-      const InterestRate = parseFloat(interestRate/12);
-  
+      var Term = parseInt(duration);
+      // if (Term < 12) {
+      //   Term = 12;
+      // }
+      const InterestRate = parseFloat(interestRate / 12);
+      console.log(Term);
       // Calculate the monthly payment
       const monthlyInterestRate = InterestRate / 100;
 
@@ -857,14 +862,14 @@ routes.savingCalculator = async (req, res) => {
           (monthlyInterestRate / (1 - Math.pow(1 + monthlyInterestRate, -Term)))
       );
 
-      const totalAmount = duration * monthlyPayment;
+      const totalAmount = Term * monthlyPayment;
 
       return res.status(200).json({ totalAmount });
     }
 
     const principal = Amount; // Loan amount
     const rate = 10 / 100; // yearly interest rate
-    const numberOfPayments = duration; // Total number of payments (months)
+    const numberOfPayments = parseInt(duration); // Total number of payments (months)
 
     const emi = parseFloat(
       (
@@ -873,7 +878,7 @@ routes.savingCalculator = async (req, res) => {
       ).toFixed(2)
     );
 
-    console.log(emi * numberOfPayments);
+
 
     return res.status(200).json({ totalAmount: emi * numberOfPayments });
   } catch (error) {
@@ -936,8 +941,15 @@ routes.createLoanSimpleInterest = async (req, res) => {
     const Term = parseInt(term);
     const InterestRate = parseFloat(interestRate);
 
-    const totalAmount =
+    var totalAmount = 0;
+
+    if(Term < 12){
+      totalAmount =
+      Amount + parseInt(((Amount * interestRate * 12) / 1200).toFixed(2));
+    }else{
+      totalAmount =
       Amount + parseInt(((Amount * interestRate * Term) / 1200).toFixed(2));
+    }
 
     const repaymentAmount = Math.round(totalAmount / Term);
     let balance = totalAmount;
@@ -1010,16 +1022,20 @@ routes.createLoanReducingInterest = async (req, res) => {
     const interestRate = admin.interestRateReducing;
 
     const Amount = parseInt(amount);
-    const Term = parseInt(term);
+    var Term = parseInt(term);
     const InterestRate = parseFloat(interestRate / 12);
 
     // Calculate the monthly payment
     const monthlyInterestRate = InterestRate / 100;
 
-    const monthlyPayment = Math.round(
-      Amount *
-        (monthlyInterestRate / (1 - Math.pow(1 + monthlyInterestRate, -Term)))
-    );
+
+    const  monthlyPayment = Math.round(
+        Amount *
+          (monthlyInterestRate / (1 - Math.pow(1 + monthlyInterestRate, -Term)))
+      );
+
+
+    console.log(monthlyPayment)
 
     // Initialize the loan balance
     let balance = Amount;
