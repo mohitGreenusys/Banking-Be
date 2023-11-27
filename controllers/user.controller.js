@@ -836,17 +836,21 @@ routes.savingCalculator = async (req, res) => {
     if (type === "Simple Interest") {
       interestRate = admin.interestRateSimple;
       const Term = parseInt(duration);
-      // console.group(interestRate)
-      const totalAmount = Amount + ((Amount * (interestRate/12)) / 100) * Term;
+      console.log(interestRate / 12);
+      const totalAmount = Amount + (Amount * interestRate * Term) / 1200;
 
       return res.status(200).json({ totalAmount });
     } else if (type === "Reducing Interest") {
       interestRate = admin.interestRateReducing;
 
+      // const Amount = parseInt(amount);
       const Term = parseInt(duration);
+      const InterestRate = parseFloat(interestRate/12);
+  
+      // Calculate the monthly payment
+      const monthlyInterestRate = InterestRate / 100;
 
-      const monthlyInterestRate = interestRate / 100/12;
-
+      console.log(monthlyInterestRate);
 
       const monthlyPayment = Math.round(
         Amount *
@@ -858,18 +862,22 @@ routes.savingCalculator = async (req, res) => {
       return res.status(200).json({ totalAmount });
     }
 
-
     const principal = Amount; // Loan amount
-    const rate = 10 / 100 ; // yearly interest rate
+    const rate = 10 / 100; // yearly interest rate
     const numberOfPayments = duration; // Total number of payments (months)
 
-    const emi = parseFloat(((principal * rate * Math.pow(1 + rate, numberOfPayments)) / (Math.pow(1 + rate, numberOfPayments) - 1)).toFixed(2));
+    const emi = parseFloat(
+      (
+        (principal * rate * Math.pow(1 + rate, numberOfPayments)) /
+        (Math.pow(1 + rate, numberOfPayments) - 1)
+      ).toFixed(2)
+    );
 
-    console.log(emi*numberOfPayments)
+    console.log(emi * numberOfPayments);
 
-    return res.status(200).json({ totalAmount:emi*numberOfPayments });
+    return res.status(200).json({ totalAmount: emi * numberOfPayments });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return res.status(500).json({ error: "Something went wrong" });
   }
 };
@@ -926,9 +934,10 @@ routes.createLoanSimpleInterest = async (req, res) => {
 
     const Amount = parseInt(amount);
     const Term = parseInt(term);
-    const InterestRate = parseFloat(interestRate/12);
+    const InterestRate = parseFloat(interestRate);
 
-    const totalAmount = Amount + ((Amount * InterestRate) / 100) * Term;
+    const totalAmount =
+      Amount + parseInt(((Amount * interestRate * Term) / 1200).toFixed(2));
 
     const repaymentAmount = Math.round(totalAmount / Term);
     let balance = totalAmount;
@@ -937,7 +946,7 @@ routes.createLoanSimpleInterest = async (req, res) => {
 
     // Calculate the loan details for each month
     for (let month = 1; month <= Term; month++) {
-      const interestPayment = (InterestRate * Amount) / 100;
+      const interestPayment = (InterestRate * Amount) / 1200;
       // const principalPayment = repaymentAmount - interestPayment;
       // balance -= principalPayment;
 
@@ -968,7 +977,6 @@ routes.createLoanSimpleInterest = async (req, res) => {
       BankAccountDetails,
       modeOfPayment: "Bank Transfer",
     };
-
     const newloan = new loanModel(data);
 
     await newloan.save();
@@ -986,8 +994,7 @@ routes.createLoanSimpleInterest = async (req, res) => {
 routes.createLoanReducingInterest = async (req, res) => {
   try {
     const id = req.userId;
-    const { amount, term, interestRate, interest, remark, BankAccountDetails } =
-      req.body;
+    const { amount, term, interest, remark, BankAccountDetails } = req.body;
 
     const user = await UserModel.findById(id);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -998,12 +1005,16 @@ routes.createLoanReducingInterest = async (req, res) => {
       }
     });
 
+    const admin = await adminModel.findOne({ role: "Admin" });
+
+    const interestRate = admin.interestRateReducing;
+
     const Amount = parseInt(amount);
     const Term = parseInt(term);
-    const InterestRate = parseFloat(interestRate/12);
+    const InterestRate = parseFloat(interestRate / 12);
 
     // Calculate the monthly payment
-    const monthlyInterestRate = interestRate / 100;
+    const monthlyInterestRate = InterestRate / 100;
 
     const monthlyPayment = Math.round(
       Amount *
@@ -1096,11 +1107,16 @@ routes.createLoanCompoundInterest = async (req, res) => {
     //   );
 
     const principal = Amount; // Loan amount
-    const rate = interestRate / 100 ; // yearly interest rate
+    const rate = interestRate / 100; // yearly interest rate
     const numberOfPayments = Term; // Total number of payments (months)
 
     // Calculate EMI (Equated Monthly Installment)
-    const emi = parseFloat(((principal * rate * Math.pow(1 + rate, numberOfPayments)) / (Math.pow(1 + rate, numberOfPayments) - 1)).toFixed(2));
+    const emi = parseFloat(
+      (
+        (principal * rate * Math.pow(1 + rate, numberOfPayments)) /
+        (Math.pow(1 + rate, numberOfPayments) - 1)
+      ).toFixed(2)
+    );
 
     let remainingBalance = principal;
     const loanDetails = [];
@@ -1121,22 +1137,22 @@ routes.createLoanCompoundInterest = async (req, res) => {
 
       loanDetails.push(installment);
     }
-console.log(loanDetails)
+    console.log(loanDetails);
     const data = {
       user: user._id,
       amount: Amount,
       term: Term,
       interest,
       interestRate: interestRate,
-      totalAmount : emi*Term,
-      repaymentAmount:emi,
+      totalAmount: parseFloat((emi * Term).toFixed(2)),
+      repaymentAmount: emi,
       remark,
       loanDetails,
       BankAccountDetails,
       modeOfPayment: "Bank Transfer",
     };
 
-    console.log(data)
+    console.log(data);
 
     const newLoan = new loanModel(data);
     await newLoan.save();
@@ -1145,8 +1161,8 @@ console.log(loanDetails)
     await user.save();
 
     return res.status(200).json({
-       loan: newLoan 
-      });
+      loan: newLoan,
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ error: "Something went wrong" });

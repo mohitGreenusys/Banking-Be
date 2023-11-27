@@ -68,8 +68,12 @@ router.post(
   adminController.createLoanSimpleInterest
 );
 router.post(
-  "/loanReducingInterest/:id",
+  "/loanReducingInterest/:id",adminauth,
   adminController.createLoanReducingInterest
+);
+router.post(
+  "/loanCompoundInterest/:id",adminauth,
+  adminController.createLoanCompoundInterest
 );
 
 // router.post("/addloan/:userid", adminauth, adminController.createloan);

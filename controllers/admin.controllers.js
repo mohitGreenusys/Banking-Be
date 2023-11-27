@@ -665,6 +665,97 @@ routes.createLoanSimpleInterest = async (req, res) => {
   }
 };
 
+routes.createLoanCompoundInterest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount, term, remark } = req.body;
+
+    const user = await UserModel.findById(id);
+    // console.log(user);
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // user?.loan?.map((loan) => {
+    //   if (loan.status === "Default" || loan.status === "Active") {
+    //     return res.status(404).json({ error: "User already have loan" });
+    //   }
+    // });
+
+    const admin = await AdminModel.findOne({ role: "Admin" });
+
+    const interestRate = admin.interestRateCompound;
+
+    // const interestRate = 10;
+
+    const Amount = parseInt(amount);
+    const Term = parseInt(term); 
+    const InterestRate = parseFloat(interestRate);
+
+ 
+
+    const principal = Amount; // Loan amount
+    const rate = InterestRate / 100; // yearly interest rate
+    const numberOfPayments = Term; // Total number of payments (months)
+
+    // Calculate EMI (Equated Monthly Installment)
+    const emi = parseFloat(
+      (
+        (principal * rate * Math.pow(1 + rate, numberOfPayments)) /
+        (Math.pow(1 + rate, numberOfPayments) - 1)
+      ).toFixed(2)
+    );
+
+    let remainingBalance = principal;
+    const loanDetails = [];
+
+    // Calculate the loan details for each month
+    for (let month = 1; month <= numberOfPayments; month++) {
+      const interestPayment = parseFloat((remainingBalance * rate).toFixed(2));
+      const principalPayment = parseFloat((emi - interestPayment).toFixed(2));
+      remainingBalance -= principalPayment;
+
+      const installment = {
+        month,
+        principalPayment,
+        interestPayment,
+        totalPayment: emi,
+        remainingBalance: parseFloat(remainingBalance.toFixed(2)), // Rounded to two decimal places
+      };
+
+      loanDetails.push(installment);
+    }
+    console.log(loanDetails);
+    const data = {
+      user: user._id,
+      amount: Amount,
+      term: Term,
+      interest:"Compound Interest",
+      interestRate: interestRate,
+      totalAmount: parseFloat((emi * Term).toFixed(2)),
+      repaymentAmount: emi,
+      remark,
+      loanDetails,
+      // BankAccountDetails,
+      modeOfPayment: "Cash",
+    };
+
+    console.log(data);
+
+    const newLoan = new LoanModel(data);
+    await newLoan.save();
+
+    user.loan.push(newLoan._id);
+    await user.save();
+
+    return res.status(200).json({
+      loan: newLoan,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
 // routes.createloan = async (req, res) => {
 //   const { userid } = req.params;
 //   const { amount, term, interest, repaymentterm } = req.body;
