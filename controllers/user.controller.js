@@ -933,11 +933,20 @@ routes.createLoanSimpleInterest = async (req, res) => {
       }
     });
 
+    if(user.balance < 1){
+    return res.status(200).json({message:"Please do investment to take Loan"})
+    }
+
+    const Amount = parseInt(amount);
+
+    if(Amount > 3*user.balance){
+      return res.status(200).json({message:"You can only take a Loan of 3X of your balance"})
+    }
     const admin = await adminModel.findOne({ role: "Admin" });
 
     const interestRate = admin.interestRateSimple;
 
-    const Amount = parseInt(amount);
+
     const Term = parseInt(term);
     const InterestRate = parseFloat(interestRate);
 
@@ -1017,11 +1026,21 @@ routes.createLoanReducingInterest = async (req, res) => {
       }
     });
 
+    
+    if(user.balance < 1){
+      return res.status(200).json({message:"Please do investment to take Loan"})
+      }
+  
+      const Amount = parseInt(amount);
+  
+      if(Amount > 3*user.balance){
+        return res.status(200).json({message:"You can only take a Loan of 3X of your balance"})
+      }
+
     const admin = await adminModel.findOne({ role: "Admin" });
 
     const interestRate = admin.interestRateReducing;
 
-    const Amount = parseInt(amount);
     var Term = parseInt(term);
     const InterestRate = parseFloat(interestRate / 12);
 
@@ -1102,12 +1121,23 @@ routes.createLoanCompoundInterest = async (req, res) => {
       }
     });
 
+    
+    if(user.balance < 1){
+      return res.status(200).json({message:"Please do investment to take Loan"})
+      }
+  
+      const Amount = parseInt(amount);
+  
+      if(Amount > 3*user.balance){
+        return res.status(200).json({message:"You can only take a Loan of 3X of your balance"})
+      }
+
     const admin = await adminModel.findOne({ role: "Admin" });
 
     // const interestRate = admin.interestRateCompound;
     const interestRate = 10;
 
-    const Amount = parseInt(amount);
+
     const Term = parseInt(term);
     // const InterestRate = parseFloat(interestRate);
 
@@ -1168,7 +1198,7 @@ routes.createLoanCompoundInterest = async (req, res) => {
       modeOfPayment: "Bank Transfer",
     };
 
-    console.log(data);
+    // console.log(data);
 
     const newLoan = new loanModel(data);
     await newLoan.save();
