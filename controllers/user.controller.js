@@ -1042,7 +1042,7 @@ routes.createLoanReducingInterest = async (req, res) => {
     const interestRate = admin.interestRateReducing;
 
     var Term = parseInt(term);
-    const InterestRate = parseFloat(interestRate / 12);
+    const InterestRate = parseFloat((interestRate / 12).toFixed(3));
 
     // Calculate the monthly payment
     const monthlyInterestRate = InterestRate / 100;
@@ -1082,7 +1082,7 @@ routes.createLoanReducingInterest = async (req, res) => {
       amount: Amount,
       term: Term,
       interest,
-      interestRate: InterestRate,
+      interestRate: interestRate,
       totalAmount: monthlyPayment * Term,
       repaymentAmount: monthlyPayment,
       remark,
