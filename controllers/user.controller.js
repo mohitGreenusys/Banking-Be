@@ -967,7 +967,7 @@ routes.createLoanSimpleInterest = async (req, res) => {
 
     // Calculate the loan details for each month
     for (let month = 1; month <= Term; month++) {
-      const interestPayment = (InterestRate * Amount) / 1200;
+      const interestPayment = parseFloat(((InterestRate * Amount) / 1200).toFixed(2));
       // const principalPayment = repaymentAmount - interestPayment;
       // balance -= principalPayment;
 
