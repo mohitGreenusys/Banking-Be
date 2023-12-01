@@ -538,7 +538,7 @@ routes.depositransaction = async (req, res) => {
 
     const transactions  = await transactionModel.find({userId:id,transactionType:{ $in: ["Deposit", "Investment","Interest"] }})
 
-    if (!user) return res.status(404).json({ error: "User not found" });
+    // if (!user) return res.status(404).json({ error: "User not found" });
 
     return res.status(200).json({ transactions: transactions });
   } catch (error) {
