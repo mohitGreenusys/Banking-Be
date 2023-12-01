@@ -532,7 +532,7 @@ routes.depositransaction = async (req, res) => {
     const user = await UserModel.findById(id).populate({
       path: "transactions",
       match: {
-        transactionType: { $in: ["Deposit", "Investment"] },
+        transactionType: { $in: ["Deposit", "Investment","Interest"] },
       },
     });
 
