@@ -71,10 +71,10 @@ routes.signup = async (req, res) => {
       return res.status(200).json({ error: "User already exists" });
 
     // unique number
-    const uniqueNumberid = await UserModel.find({ mobile: mobile });
+    // const uniqueNumberid = await UserModel.find({ mobile: mobile });
 
-    if (uniqueNumberid.length > 0)
-      return res.status(200).json({ error: "Mobile number already exists" });
+    // if (uniqueNumberid.length > 0)
+    //   return res.status(200).json({ error: "Mobile number already exists" });
 
     if (ifUser && !ifUser.isVerified)
       await UserModel.findByIdAndDelete(ifUser._id);
