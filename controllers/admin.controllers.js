@@ -90,22 +90,13 @@ routes.register = async (req, res) => {
 routes.getdashboard = async (req, res) => {
   try {
     const totalmember = await UserModel.countDocuments();
-    const allloan = await LoanModel.find();
+    const allloan = await LoanModel.find( {status:{ $in :["Active","Default"]}});
+
     let totalloan = 0;
     let totalinterest = 0;
     allloan.forEach((loan) => {
       totalloan += loan.amount;
-      let interest = 0,
-        rate = loan.interestRate,
-        term = loan.term,
-        principal = loan.amount;
-      if (loan.interest === "Compound Interest") {
-        interest = principal * (Math.pow(1 + rate / 100, term) - 1);
-      } else {
-        interest = (principal * rate * term) / 100;
-      }
-
-      totalinterest += interest;
+      totalinterest += (loan.totalAmount - loan.amount)
     });
     const allinvestment = await InvestmentModel.find();
     let totalyield = 0;
@@ -1136,15 +1127,25 @@ routes.releaseInvestmentInterestShareProfit = async (req, res) => {
         }
       })
 
+
       const notification = await NotificationModel.create({
         userId: user._id,
         title: `Interest Released for ${totalInvestment}`,
         message: `Interest has been released for ${totalInvestment}`,
       });
 
-      var totalAmount = totalInterest + totalInvestment
+      var totalAmount = totalInterest + totalInvestment;
+      const transaction = await TransactionModel.create({
+        userId:user._id,
+        amount : totalAmount - user.balance,
+        transactionId:"by admin",
+        transactionType:"Interest",
+        modeofpayment:"Account Transfer",
+        remark:"share Interest"
+      })
       user.balance = totalAmount;
       user.notification.push(notification._id);
+      user.transactions.push(transaction._id);
       await user.save()
     })
 
@@ -1501,7 +1502,7 @@ routes.userTranstionDetail = async (req, res) => {
 
     const loanArray = ["LoanGiven", "LoanPaid", "LoanRepayment"];
 
-    const InvestmentArray = ["Deposit", "Withdraw", "Investment"];
+    const InvestmentArray = ["Deposit", "Withdraw", "Investment","Interest"];
 
     const loanTransaction = await TransactionModel.find({
       userId,

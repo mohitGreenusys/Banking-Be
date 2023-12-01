@@ -45,7 +45,7 @@ routes.login = async (req, res) => {
     if (!user.isVerified)
       return res
         .status(200)
-        .json({ error: "User not verified. follow the signup process" });
+        .json({ error: "User not verified. follow the signup process again" });
 
     if (!user.password)
       return res.status(200).json({ error: "User don't have password" });
@@ -1225,8 +1225,15 @@ routes.totalRemainingBalance = async (req, res) => {
       return res.status(200).json({ message: "no laon found" });
     }
 
-    const totalRemainingBalance =
-      loan.upcommingEMI?.remainingBalance + loan.upcommingEMI?.totalPayment;
+    var totalRemainingBalance  = 0;
+
+    totalRemainingBalance =  loan.upcommingEMI?.remainingBalance + loan.upcommingEMI?.totalPayment;
+
+    if(loan.dueEMI){
+      loan?.dueEMI.map((item)=>{
+        totalRemainingBalance += item?.totalPayment
+      })
+    }
 
     return res
       .status(200)
@@ -1359,6 +1366,10 @@ routes.totalRemainingPay = async (req, res) => {
     loan.repaymenttransactionId.push(newtransaction._id);
 
     loan.upcommingEMI = null;
+    loan.dueEMI = [];
+
+    // loan.totalAmount = 
+    loan.remark = `loan paid earlier, ${loan.remark}`
 
     loan.status = "Paid";
 

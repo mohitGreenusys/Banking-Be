@@ -38,7 +38,7 @@ router.post("/login", adminController.login);
 router.post("/register", adminController.register);
 
 // ----------------------------------------------Dashboard Details------------------------------------------------ //
-router.get("/statsdashboard", adminauth, adminController.getdashboard);
+router.get("/statsdashboard", adminController.getdashboard);
 router.get("/userbasedgender", adminauth, adminController.userbasedongender);
 router.get("/userbasedjoining", adminauth, adminController.userbasedonjoining);
 router.get("/notification", adminauth, adminController.notify);
@@ -103,7 +103,7 @@ router.get(
   adminauth,
   adminController.releaseInvestmentInterestFixedInterest
 );
-router.get("/releaseProfitShare",adminauth,adminController.releaseInvestmentInterestShareProfit
+router.get("/releaseProfitShare",adminController.releaseInvestmentInterestShareProfit
 );
 
 router.get("/allinvestment", adminauth, adminController.getinvestment);

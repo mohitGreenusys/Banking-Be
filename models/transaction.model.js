@@ -24,6 +24,7 @@ const transactionSchema = new mongoose.Schema({
       "LoanPaid", //withdraw(user)
       "Investment", // deposit(user)
       "LoanRepayment", // withdraw(user)
+      "Interest"
     ],
     required: true,
   },
@@ -33,7 +34,7 @@ const transactionSchema = new mongoose.Schema({
   },
   modeofpayment: {
     type: String,
-    enum: ["Cash", "Cheque", "Bank Transfer"],
+    enum: ["Cash", "Cheque", "Bank Transfer","Account Transfer"],
     default: "Cash",
     required: true,
   },
