@@ -529,16 +529,18 @@ routes.depositransaction = async (req, res) => {
   try {
     const id = req.userId;
 
-    const user = await UserModel.findById(id).populate({
-      path: "transactions",
-      match: {
-        transactionType: { $in: ["Deposit", "Investment","Interest"] },
-      },
-    });
+    // const user = await UserModel.findById(id).populate({
+    //   path: "transactions",
+    //   match: {
+    //     transactionType: { $in: ["Deposit", "Investment","Interest"] },
+    //   },
+    // });
+
+    const transactions  = await transactionModel.find({userId:id,transactionType:{ $in: ["Deposit", "Investment","Interest"] }})
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    return res.status(200).json({ transactions: user.transactions });
+    return res.status(200).json({ transactions: transactions });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ error: "Something went wrong" });
