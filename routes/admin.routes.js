@@ -44,19 +44,19 @@ router.get("/userbasedjoining", adminauth, adminController.userbasedonjoining);
 router.get("/notification", adminauth, adminController.notify);
 
 // ----------------------------------------------User Details------------------------------------------------ //
+
+router.get("/userByName",adminauth,adminController.searchUser);
 router.get("/allusers", adminauth, adminController.getalluser);
 router.get("/user/:id", adminauth, adminController.getuser);
 router.post("/adduser", adminauth, adminController.createuser);
 router.post("/verifyotp/:id", adminauth, adminController.verifyuser);
-router.post(
-  "/sendpwdlink/:id",
-  adminauth,
-  uploadDocument.single("document"),
-  adminController.sendpasslink
-);
+router.post("/sendpwdlink/:id",adminauth,uploadDocument.single("document"),adminController.sendpasslink);
 router.post("/setsavingpro/:id", adminauth, adminController.setsavingpro);
+router.get("/interestRates", adminauth, adminController.interestRates);
+router.post("/interestRates", adminauth, adminController.updateinterestRates);
 
 // ----------------------------------------------Loan Details------------------------------------------------ //
+router.get("/loanByUserName",adminauth,adminController.searchLoan);
 router.get("/loan/:id", adminauth, adminController.getloanbyid);
 router.get("/pendingloan", adminauth, adminController.getpendingloan);
 router.get("/approvedloan", adminauth, adminController.getapprovedloan);
@@ -67,12 +67,8 @@ router.post(
   "/loanSimpleInterest/:id",
   adminController.createLoanSimpleInterest
 );
-router.post(
-  "/loanReducingInterest/:id",adminauth,
-  adminController.createLoanReducingInterest
-);
-router.post(
-  "/loanCompoundInterest/:id",adminauth,
+router.post("/loanReducingInterest/:id",adminauth,adminController.createLoanReducingInterest);
+router.post("/loanCompoundInterest/:id",adminauth,
   adminController.createLoanCompoundInterest
 );
 
@@ -82,7 +78,7 @@ router.post("/addpayment/:id", adminauth, adminController.addpaymentmethod);
 router.get("/creditLoan/:id", adminauth, adminController.approveloan);
 router.get("/reject/:id", adminauth, adminController.rejectloan);
 
-// ----------------------------------------------Investment Details------------------------------------------------ //
+// ---------------------------------------------- Investment Details ------------------------------------------------ //
 router.get(
   "/withdrawlInvestmentsRequests",
   adminauth,
@@ -108,11 +104,15 @@ router.get("/releaseProfitShare",adminController.releaseInvestmentInterestShareP
 
 router.get("/allinvestment", adminauth, adminController.getinvestment);
 router.get("/investment/:id", adminauth, adminController.getinvestmentbyuser);
+router.get("/shareProfitReport",  adminController.shareProfitReport);
 
-// ----------------------------------------------Transaction Details------------------------------------------------ //
+// ----------------------------------------------Transaction Details----------------------------------------------- //
 
 router.get("/gettransaction/:range", adminauth, adminController.gettransaction);
-router.get("/userTranstion/:id",adminauth, adminController.userTranstionDetail)
+router.get("/userTranstion/:id",adminauth, adminController.userTranstionDetail);
+router.get("/todayLoans", adminauth, adminController.todayLoans);
+router.get("/todayLoanRepayment", adminauth, adminController.todayLoanRepayment);
+router.get("/outStandingLoan", adminauth, adminController.outStandingLoan);
 
 // ----------------------------------------------Customer Support------------------------------------------------ //
 router.get("/alltickets", adminauth, adminController.getCustomerSupport);

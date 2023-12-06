@@ -166,6 +166,22 @@ routes.notify = async (req, res) => {
 
 // ----------------------------------------------User Details------------------------------------------------ //
 
+routes.searchUser = async (req, res) => {
+  try {
+    const name = req.query.name;
+
+    const users = await UserModel.find({ name: name }).select(
+      "-password -otp -otpExpires"
+    );
+
+    return res.status(200).json({ users });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
 routes.getalluser = async (req, res) => {
   try {
     const users = await UserModel.find().select(
@@ -330,7 +346,63 @@ routes.setsavingpro = async (req, res) => {
   }
 };
 
+routes.interestRates = async (req, res) => {
+  try {
+    const admin = await AdminModel.findOne({ role: "Admin" });
+
+    if (!admin) return res.status(404).json({ error: "Admin not found" });
+
+    res.status(200).json({
+      interestRateReducing: admin.interestRateReducing,
+      interestRateSimple: admin.interestRateSimple,
+      interestRateCompound: admin.interestRateCompound,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+routes.updateinterestRates = async (req, res) => {
+  const { interestRateReducing, interestRateSimple, interestRateCompound } =
+    req.body;
+
+  try {
+    const admin = await AdminModel.findOne({ role: "Admin" });
+
+    if (!admin) return res.status(404).json({ error: "Admin not found" });
+
+    admin.interestRateReducing = interestRateReducing;
+    admin.interestRateSimple = interestRateSimple;
+    admin.interestRateCompound = interestRateCompound;
+
+    const result = await admin.save();
+
+    res.status(200).json({
+      interestRateReducing: result.interestRateReducing,
+      interestRateSimple: result.interestRateSimple,
+      interestRateCompound: result.interestRateCompound,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+
 // ----------------------------------------------Loan Details------------------------------------------------ //
+
+routes.searchLoan = async (req, res) => {
+  const name = req.query.name;
+
+  try {
+    const user = await UserModel.findOne({ name: name }).populate("loan");
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.status(200).json({ loan: user?.loan });
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
 
 routes.getloanbyid = async (req, res) => {
   const { id } = req.params;
@@ -1381,7 +1453,7 @@ routes.depositInvestment = async (req, res) => {
 
     user.balance += amount;
 
-    const admin = await adminModel.findOne({ role: "Admin" });
+    const admin = await AdminModel.findOne({ role: "Admin" });
 
     if (!admin) return res.status(404).json({ error: "Admin not found" });
 
@@ -1438,6 +1510,33 @@ routes.depositInvestment = async (req, res) => {
       transaction: newtransaction,
     });
   } catch (error) {
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+routes.shareProfitReport = async (req, res) => {
+  try {
+    const { range } = req.query;
+    const days = parseInt(range);
+
+    let query = {};
+
+    if (!isNaN(days) && days > 0) {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      console.log(startDate)
+      query = { date: { $gte: startDate }};
+    }
+
+    const transactions = await TransactionModel.find({...query, transactionType: "Interest"}).populate({
+      path: "userId",
+      select: "name email savingProduct _id",
+      match: { savingProduct: "shareProfit" },
+    }).select("userId amount createdAt transactionType transactionId modeofpayment remark");
+
+    return res.status(200).json({ transactions });
+  } catch (error) {
+    console.log(error);
     return res.status(500).json({ error: "Something went wrong" });
   }
 };
@@ -1534,6 +1633,74 @@ routes.userTranstionDetail = async (req, res) => {
     res.status(500).json({ error: "Something went wrong" });
   }
 };
+
+routes.todayLoans = async (req, res) => {
+  try {
+    // const today = new Date().toISOString().split("T")[0];
+
+    const loans = await LoanModel.find({
+      // createdAt: { $gte: today },
+      status: {$in:["Active","Default"]},
+    });
+
+    const totalActiveLoan = loans.reduce((acc, loan) => {
+      return acc + loan.totalAmount;
+    }, 0);
+
+    return res.status(200).json({ totalActiveLoan });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+routes.todayLoanRepayment = async (req, res) => {
+  try {
+    // const today = new Date().toISOString().split("T")[0];
+
+    const repayments = await TransactionModel.find({
+      // createdAt: { $gte: today },
+      transactionType: "LoanRepayment",
+    }).populate("userId");
+
+    const totalLoanRepayment = repayments.reduce((acc, repayment) => {
+      return acc + repayment.amount;
+    }, 0);
+    
+    return res.status(200).json({ totalLoanRepayment });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+routes.outStandingLoan = async (req, res) => {
+  try {
+  
+    var totalOutstandingLoan = 0;
+
+    const loans = await LoanModel.find({
+      status: { $in: ["Default", "Active"] },
+    }).populate("transactions");
+
+    loans.map((loan) => {
+      totalOutstandingLoan += loan.totalAmount;
+      loan.transactions.map((transaction) => {
+        if (transaction.transactionType === "LoanRepayment") {
+          totalOutstandingLoan -= transaction.amount;
+        }
+      });
+    });
+
+    return res.status(200).json({ totalOutstandingLoan });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+}
+
+
+
 
 // ----------------------------------------------Customer Support------------------------------------------------ //
 
