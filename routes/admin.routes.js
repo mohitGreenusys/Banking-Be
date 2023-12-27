@@ -93,7 +93,7 @@ router.get(
   "/deleteWithdraw/:id",
   adminauth,
   adminController.rejectWithdrawlRequest
-);
+  );
 router.get(
   "/releaseFixedInterest",
   adminauth,

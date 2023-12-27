@@ -90,21 +90,48 @@ routes.register = async (req, res) => {
 routes.getdashboard = async (req, res) => {
   try {
     const totalmember = await UserModel.countDocuments();
+    // const allloan = await LoanModel.find( {status:{ $in :["Active","Default"]}});
     const allloan = await LoanModel.find( {status:{ $in :["Active","Default"]}});
 
     let totalloan = 0;
     let totalinterest = 0;
+    let totalpaid = 0;  
+    let totalpending = 0;
     allloan.forEach((loan) => {
       totalloan += loan.amount;
       totalinterest += (loan.totalAmount - loan.amount)
+      if(loan.status === "Active" || loan.status === "Default"){
+        totalpending += loan.totalAmount;
+      }
+      if(loan.status === "Paid"){
+        totalpaid += loan.totalAmount;
+      }
     });
-    const allinvestment = await InvestmentModel.find();
-    let totalyield = 0;
-    allinvestment.forEach((investment) => {
-      totalyield += investment.amount;
+    let totalinvested = 0;
+    const totalInvestments = await TransactionModel.find({ transactionType: "Investment" });
+    
+    totalInvestments.forEach((investment) => {
+      totalinvested += investment.amount;
     });
 
-    res.status(200).json({ totalmember, totalloan, totalinterest, totalyield });
+    let totalwithdrawn = 0;
+    const totalwithdrawns = await TransactionModel.find({ transactionType: "Withdraw" });
+
+    totalwithdrawns.forEach((withdraw) => {
+      totalwithdrawn += withdraw.amount;
+    });
+
+    const activeInvestment = await InvestmentModel.find({ status: "Active" });
+    // let totalyield = 0;
+
+    let totalOutstandingInv = 0;
+    activeInvestment.forEach((investment) => {
+      totalOutstandingInv += investment.amount;
+      totalOutstandingInv += investment.interestEarned;
+      
+    });
+
+    res.status(200).json({ totalmember, totalloan, totalpaid, totalpending, totalinterest, totalinvested, totalwithdrawn, totalOutstandingInv });
   } catch (error) {
     res.status(500).json({ error: "Something went wrong" });
   }
@@ -423,10 +450,10 @@ routes.getloanbyid = async (req, res) => {
       });
 
       // remaining amount
-      remaining = loan.totalAmount - totalpaid;
+      remaining = loan?.totalAmount - totalpaid;
     }
 
-    res.status(200).json({ loan, totalpaid, remaining });
+    res.status(200).json({ loan, totalpaid, remaining, totalInterest: loan?.totalAmount - loan?.amount });
   } catch (error) {
     res.status(500).json({ error: "Something went wrong" });
   }
@@ -1238,18 +1265,30 @@ routes.releaseInvestmentInterestShareProfit = async (req, res) => {
 routes.getinvestmentbyuser = async (req, res) => {
   const { id } = req.params;
   try {
-    const investments = await UserModel.findById(id)
-      .populate("investment")
-      .populate("transactions");
-    // total amount
+    // const investments = await UserModel.findById(id)
+    //   .populate("investment")
+    //   .populate("transactions");
+    // // total amount
     let totalamount = 0;
 
-    investments.investment.forEach((investment) => {
+    // investments.investment.forEach((investment) => {
+    //   totalamount += investment.amount;
+    // });
+
+    const InvestmentArray = ["Deposit", "Withdraw", "Investment","Interest",];
+
+    const investments = await TransactionModel.find({
+      userId: id,
+      transactionType: { $in: InvestmentArray },
+    });
+
+        investments.forEach((investment) => {
       totalamount += investment.amount;
     });
 
     res.status(200).json({ investments, totalamount });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Something went wrong" });
   }
 };
@@ -1498,7 +1537,7 @@ routes.depositInvestment = async (req, res) => {
       message: `${amount} Successfull Deposit to investment`,
     };
 
-    const newNotification = await notificationModel.create(notificationdta);
+    const newNotification = await NotificationModel.create(notificationdta);
 
     user.notification.push(newNotification.id);
 
@@ -1601,7 +1640,7 @@ routes.userTranstionDetail = async (req, res) => {
 
     const loanArray = ["LoanGiven", "LoanPaid", "LoanRepayment"];
 
-    const InvestmentArray = ["Deposit", "Withdraw", "Investment","Interest"];
+    const InvestmentArray = ["Deposit", "Withdraw", "Investment","Interest",];
 
     const loanTransaction = await TransactionModel.find({
       userId,
@@ -1681,11 +1720,11 @@ routes.outStandingLoan = async (req, res) => {
 
     const loans = await LoanModel.find({
       status: { $in: ["Default", "Active"] },
-    }).populate("transactions");
+    }).populate("repaymenttransactionId");
 
     loans.map((loan) => {
       totalOutstandingLoan += loan.totalAmount;
-      loan.transactions.map((transaction) => {
+      loan.repaymenttransactionId.map((transaction) => {
         if (transaction.transactionType === "LoanRepayment") {
           totalOutstandingLoan -= transaction.amount;
         }
@@ -1756,10 +1795,36 @@ routes.getadmintrans = async (req, res) => {
         select: "name email",
       })
       .sort({ date: -1 })
-      .limit(10);
+      .limit(50);
+
+    var loanTransaction = [];
+
+    transactions.map((transaction) => {
+      if (
+        transaction.transactionType === "LoanGiven" ||
+        transaction.transactionType === "LoanPaid"  ||
+        transaction.transactionType === "LoanRepayment"
+      ) {
+        loanTransaction.push(transaction);
+      }
+    });
+
+    var investmentTransaction = [];
+
+    transactions.map((transaction) => {
+      if (
+        transaction.transactionType === "Investment" ||
+        transaction.transactionType === "Withdraw"   ||
+        transaction.transactionType === "Deposit"    ||
+        transaction.transactionType === "Interest"
+      ) {
+        investmentTransaction.push(transaction);
+      }
+    });
+
     const admin = await AdminModel.findOne({ role: "Admin" });
 
-    return res.status(200).json({ transactions, balance: admin.balance });
+    return res.status(200).json({ loanTransaction, investmentTransaction, balance: admin.balance });
 
     // const transactions = await transactionmodel.find().populate("userId");
     // res.status(200).json({ transactions });
