@@ -639,18 +639,6 @@ routes.depositInvestment = async (req, res) => {
       (balanceTrack.totalInvestment += Amount), await balanceTrack.save();
     }
 
-    const dta = {
-      userId: user._id,
-      amount: Amount,
-      transactionType: "Investment",
-      savingProduct: user.savingProduct,
-    };
-
-    const newinvestment = new investmentModel(dta);
-    await newinvestment.save();
-
-    user.investment.push(newinvestment._id);
-
     const transactiondta = {
       userId: user._id,
       amount: Amount,
@@ -661,8 +649,23 @@ routes.depositInvestment = async (req, res) => {
     };
 
     const newtransaction = new transactionModel(transactiondta);
+console.log(newtransaction);
+    
 
     await newtransaction.save();
+
+    const dta = {
+      userId: user._id,
+      amount: Amount,
+      transactionType: "Investment",
+      transaction: newtransaction._id,
+      savingProduct: user.savingProduct,
+    };
+
+    const newinvestment = new investmentModel(dta);
+    await newinvestment.save();
+
+    user.investment.push(newinvestment._id);
 
     user.transactions.push(newtransaction._id);
 

@@ -91,15 +91,15 @@ routes.getdashboard = async (req, res) => {
   try {
     const totalmember = await UserModel.countDocuments();
     // const allloan = await LoanModel.find( {status:{ $in :["Active","Default"]}});
-    const allloan = await LoanModel.find( {status:{ $in :["Active","Default"]}});
+    const allloan = await LoanModel.find( {status:{ $in :["Active","Default","Paid"]}});
 
     let totalloan = 0;
-    let totalinterest = 0;
+    let totalinterestLoan = 0;
     let totalpaid = 0;  
     let totalpending = 0;
     allloan.forEach((loan) => {
-      totalloan += loan.amount;
-      totalinterest += (loan.totalAmount - loan.amount)
+      totalloan += loan.totalAmount;
+      totalinterestLoan += (loan.totalAmount - loan.amount)
       if(loan.status === "Active" || loan.status === "Default"){
         totalpending += loan.totalAmount;
       }
@@ -121,17 +121,26 @@ routes.getdashboard = async (req, res) => {
       totalwithdrawn += withdraw.amount;
     });
 
-    const activeInvestment = await InvestmentModel.find({ status: "Active" });
+    var investmentInterest = 0;
+    
+    const investInterestTransactions = await TransactionModel.find({ transactionType: "Interest" });
+
+    investInterestTransactions.forEach((interest) => {
+      investmentInterest += interest.amount;
+    });
+
+    const activeInvestment = await InvestmentModel.find({ status: "Active" }).populate("transaction");
     // let totalyield = 0;
+    // console.log(activeInvestment)
 
     let totalOutstandingInv = 0;
     activeInvestment.forEach((investment) => {
-      totalOutstandingInv += investment.amount;
-      totalOutstandingInv += investment.interestEarned;
+      totalOutstandingInv += investment?.amount ?? 0;
+      // totalOutstandingInv += investment?.interestEarned;
       
     });
 
-    res.status(200).json({ totalmember, totalloan, totalpaid, totalpending, totalinterest, totalinvested, totalwithdrawn, totalOutstandingInv });
+    res.status(200).json({ totalmember, totalloan, totalpaid, totalpending, totalinterestLoan, totalinvested, totalwithdrawn, totalOutstandingInv, investmentInterest });
   } catch (error) {
     res.status(500).json({ error: "Something went wrong" });
   }
@@ -453,8 +462,34 @@ routes.getloanbyid = async (req, res) => {
       remaining = loan?.totalAmount - totalpaid;
     }
 
-    res.status(200).json({ loan, totalpaid, remaining, totalInterest: loan?.totalAmount - loan?.amount });
+    var loanTransaction = [];
+    var balance = 0;
+    // console.log(loan);
+
+    // loan.map((loan) => {
+      var transaction = {};
+      transaction.amount = loan.amount;
+      transaction.date = loan.createdAt;
+      transaction.transactionType = "LoanGiven";
+      transaction.transactionId = loan?.giventransactionId?.transactionId;
+      balance -= loan.totalAmount;
+      transaction.balance = balance;
+      loanTransaction.push(transaction);
+      loan.repaymenttransactionId.map((repayment) => {
+        var transaction = {};
+        transaction.amount = repayment.amount;
+        transaction.date = repayment.date;
+        transaction.transactionType = "LoanRepayment";
+        transaction.transactionId = repayment.transactionId;
+        balance += repayment.amount;
+        transaction.balance = balance;
+        loanTransaction.push(transaction);
+      // });
+    });
+
+    res.status(200).json({ loan, loanTransaction, totalpaid, remaining, totalInterest: loan?.totalAmount - loan?.amount });
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Something went wrong" });
   }
 };
@@ -1610,13 +1645,38 @@ routes.gettransaction = async (req, res) => {
     // total withdraw
     let totalwithdraw = 0;
     transactions.forEach((transaction) => {
-      if (transaction.transactionType === "LoanGiven")
+      if (transaction.transactionType === "Withdraw")
         totalwithdraw += transaction.amount;
+    });
+
+    var loanTransaction = [];
+
+    transactions.forEach((transaction) => {
+      if (
+        transaction.transactionType === "LoanGiven" ||
+        transaction.transactionType === "LoanRepayment" ||
+        transaction.transactionType === "LoanPaid"
+      ) {
+        loanTransaction.push(transaction);
+      }
+    });
+
+    var InvestTransaction = [];
+
+    transactions.forEach((transaction) => {
+      if (
+        transaction.transactionType === "Deposit" ||
+        transaction.transactionType === "Withdraw" ||
+        transaction.transactionType === "Investment" ||
+        transaction.transactionType === "Interest"
+      ) {
+        InvestTransaction.push(transaction);
+      }
     });
 
     return res
       .status(200)
-      .json({ transactions, totalprofit, totaldeposit, totalwithdraw });
+      .json({ transactions, totalprofit, totaldeposit, totalwithdraw, loanTransaction, InvestTransaction });
   } catch (error) {
     res.status(500).json({ error: "Something went wrong" });
   }
@@ -1626,7 +1686,18 @@ routes.userTranstionDetail = async (req, res) => {
   try {
     const userId = req.params.id;
 
-    const user = await UserModel.findById(userId);
+    const user = await UserModel.findById(userId).populate({
+      path: "loan",
+      populate: [
+        {
+          path: "giventransactionId",
+          // select: "amount createdAt",
+        },
+        {
+          path: "repaymenttransactionId",
+          // select: "amount createdAt",
+        },
+      ]});
 
     var totaldeposit = 0;
     var totalwithdraw = 0;
@@ -1642,10 +1713,40 @@ routes.userTranstionDetail = async (req, res) => {
 
     const InvestmentArray = ["Deposit", "Withdraw", "Investment","Interest",];
 
-    const loanTransaction = await TransactionModel.find({
-      userId,
-      transactionType: { $in: loanArray },
+    const Loan = user?.loan;
+
+    var loanTransaction = [];
+    var balance = 0;
+
+    Loan.map((loan) => {
+      var transaction = {};
+      transaction.amount = loan.amount;
+      transaction.date = loan.createdAt;
+      transaction.transactionType = "LoanGiven";
+      transaction.transactionId = loan?.giventransactionId?.transactionId;
+      balance -= loan.totalAmount;
+      transaction.balance = balance;
+      loanTransaction.push(transaction);
+      loan.repaymenttransactionId.map((repayment) => {
+        var transaction = {};
+        transaction.amount = repayment.amount;
+        transaction.date = repayment.date;
+        transaction.transactionType = "LoanRepayment";
+        transaction.transactionId = repayment.transactionId;
+        balance += repayment.amount;
+        transaction.balance = balance;
+        loanTransaction.push(transaction);
+      });
     });
+
+    // console.log(loanTransaction);
+
+    // const loanTransaction = await TransactionModel.find({
+    //   userId,
+    //   transactionType: { $in: loanArray },
+    // });
+
+    // console.log(Loan);
 
     const InvestTransaction = await TransactionModel.find({
       userId,
@@ -1666,6 +1767,7 @@ routes.userTranstionDetail = async (req, res) => {
       balance: user.balance,
       loanTransaction,
       InvestTransaction,
+      Loan
     });
   } catch (error) {
     console.log(error);
@@ -1697,14 +1799,28 @@ routes.todayLoanRepayment = async (req, res) => {
   try {
     // const today = new Date().toISOString().split("T")[0];
 
-    const repayments = await TransactionModel.find({
-      // createdAt: { $gte: today },
-      transactionType: "LoanRepayment",
-    }).populate("userId");
+    // const repayments = await TransactionModel.find({
+    //   // createdAt: { $gte: today },
+    //   transactionType: "LoanRepayment",
+    // }).populate("userId");
 
-    const totalLoanRepayment = repayments.reduce((acc, repayment) => {
-      return acc + repayment.amount;
-    }, 0);
+    // const totalLoanRepayment = repayments.reduce((acc, repayment) => {
+    //   return acc + repayment.amount;
+    // }, 0);
+
+    const activeLoan = await LoanModel.find({ status: {$in:["Active","Default"]}}).populate("repaymenttransactionId");
+
+    var totalLoanRepayment = 0;
+
+    activeLoan.map((loan) => {
+      loan.repaymenttransactionId.map((transaction) => {
+        if (transaction.transactionType === "LoanRepayment") {
+          totalLoanRepayment += transaction.amount;
+        }
+      });
+    });
+
+
     
     return res.status(200).json({ totalLoanRepayment });
   } catch (error) {
