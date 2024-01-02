@@ -119,6 +119,8 @@ router.get("/notification", Userauth, userController.notification);
 router.post("/savingCalculator",userController.savingCalculator);
 
 //------------------loan------------------//
+
+router.get("/loanDashboard", Userauth, userController.loanDashboard);
 router.get("/interestRate", Userauth, userController.interestRate);
 router.get("/loans", Userauth, userController.getLoans);
 router.get("/loan/:id", Userauth, userController.getLoanById);

@@ -906,6 +906,39 @@ routes.notification = async (req, res) => {
   }
 };
 
+routes.loanDashboard = async (req, res) => {
+  try {
+    const id = req.userId;
+
+    const activeLoans = await loanModel.find({
+      user: id,
+      status: { $in: ["Active", "Default"] },
+    }).populate("repaymenttransactionId");
+
+    if(activeLoans.length < 1) return res.status(200).json({totalLoanAmount:0,totalLoanRepayment:0, remainingLoanAmount:0});
+
+    const totalLoanAmount = activeLoans.reduce(
+      (acc, loan) => acc + loan.totalAmount,
+      0
+    );
+
+    var totalLoanRepayment = 0;
+
+    activeLoans.map((loan) => {
+      loan.repaymenttransactionId.map((repayment) => {
+        totalLoanRepayment += repayment.amount;
+      }
+      );
+    });
+
+    return res.status(200).json({ totalLoanAmount, totalLoanRepayment, remainingLoanAmount: totalLoanAmount - totalLoanRepayment });
+
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
 routes.interestRate = async (req, res) => {
   try {
     const admin = await adminModel.findOne({ role: "Admin" });
@@ -928,7 +961,7 @@ routes.createLoanSimpleInterest = async (req, res) => {
     const { amount, term, interest, remark, BankAccountDetails } = req.body;
 
     const user = await UserModel.findById(id);
-    console.log(user);
+    // console.log(user);
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -975,7 +1008,7 @@ routes.createLoanSimpleInterest = async (req, res) => {
       const interestPayment = parseFloat(((InterestRate * Amount) / 1200).toFixed(2));
       // const principalPayment = repaymentAmount - interestPayment;
       // balance -= principalPayment;
-
+  
       balance -= repaymentAmount;
 
       const installment = {
@@ -1423,7 +1456,7 @@ routes.getLoans = async (req, res) => {
   try {
     const id = req.userId;
     // const id = req.params.id;
-    console.log(id);
+    // console.log(id);
     const user = await UserModel.findById(id).populate({
       path: "loan",
       select:
@@ -1444,9 +1477,9 @@ routes.getLoans = async (req, res) => {
       )
         return;
 
-      console.log(loan.upcommingEMI.date, "date");
+      // console.log(loan.upcommingEMI.date, "date");
       if (loan?.upcommingEMI.date > Date.now()) {
-        console.log("date is greater");
+        // console.log("date is greater");
         return;
       }
 
